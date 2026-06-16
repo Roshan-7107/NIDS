@@ -1,0 +1,120 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1 class="page-title">Security Analytics</h1>
+    <p class="page-subtitle">Visual analysis of threat patterns and attack trends</p>
+</div>
+
+<!-- ═══ Charts Grid ═══ -->
+<div class="charts-grid">
+    <!-- Severity Distribution -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">
+                <span>🎯</span> Severity Distribution
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="severityChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Attack Types -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">
+                <span>⚔️</span> Attack Categories
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="attackTypeChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Top Source IPs -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">
+                <span>🌐</span> Top Source IPs
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="topIpsChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Alert Timeline -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">
+                <span>📅</span> Alert Timeline (7 Days)
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container">
+                <canvas id="timelineChart"></canvas>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Summary Stats Bar ═══ -->
+<div class="card animate-in">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📋</span> Summary Statistics
+        </div>
+    </div>
+    <div class="card-body">
+        <div class="detail-grid" style="grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));">
+            <div class="detail-item">
+                <span class="detail-label">Total Alerts</span>
+                <span class="detail-value">{{ stats.total }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">High Severity</span>
+                <span class="detail-value" style="color: var(--severity-high);">{{ stats.high }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Medium Severity</span>
+                <span class="detail-value" style="color: var(--severity-medium);">{{ stats.medium }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Low Severity</span>
+                <span class="detail-value" style="color: var(--severity-low);">{{ stats.low }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Unique Categories</span>
+                <span class="detail-value">{{ attack_types | length }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Unique Source IPs</span>
+                <span class="detail-value">{{ top_ips | length }}</span>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/analytics.js') }}"></script>
+<script>
+    // Pass data to charts
+    const severityData = {{ severity_dist | tojson }};
+    const attackTypeData = {{ attack_types | tojson }};
+    const topIpsData = {{ top_ips | tojson }};
+    const timelineData = {{ timeline | tojson }};
+
+    initAllCharts(severityData, attackTypeData, topIpsData, timelineData);
+</script>
+{% endblock %}

@@ -1,0 +1,177 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+        <h1 class="page-title">Security Dashboard</h1>
+        <p class="page-subtitle">Real-time overview of network security events</p>
+    </div>
+    <div class="live-indicator">
+        <span class="live-dot"></span>
+        <span>Live Monitoring</span>
+    </div>
+</div>
+
+<!-- ═══ Stat Cards ═══ -->
+<div class="stats-grid" id="stats-grid">
+    <div class="stat-card total animate-in">
+        <div class="stat-icon">🔔</div>
+        <div class="stat-value" data-counter="{{ stats.total }}">{{ stats.total }}</div>
+        <div class="stat-label">Total Alerts</div>
+        <div class="stat-change">
+            <span>📅 {{ stats.recent_24h }} in last 24h</span>
+        </div>
+    </div>
+
+    <div class="stat-card high animate-in">
+        <div class="stat-icon">🔴</div>
+        <div class="stat-value" data-counter="{{ stats.high }}">{{ stats.high }}</div>
+        <div class="stat-label">High Severity</div>
+        <div class="stat-change up">
+            <span>⚠️ Requires attention</span>
+        </div>
+    </div>
+
+    <div class="stat-card medium animate-in">
+        <div class="stat-icon">🟡</div>
+        <div class="stat-value" data-counter="{{ stats.medium }}">{{ stats.medium }}</div>
+        <div class="stat-label">Medium Severity</div>
+        <div class="stat-change">
+            <span>📋 Monitor closely</span>
+        </div>
+    </div>
+
+    <div class="stat-card low animate-in">
+        <div class="stat-icon">🟢</div>
+        <div class="stat-value" data-counter="{{ stats.low }}">{{ stats.low }}</div>
+        <div class="stat-label">Low Severity</div>
+        <div class="stat-change down">
+            <span>✅ {{ stats.analyzed }} analyzed by AI</span>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Two Column: Severity Chart + Recent Alerts ═══ -->
+<div class="two-col">
+    <!-- Severity Distribution Mini Chart -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">
+                <span>📊</span> Severity Distribution
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="chart-container" style="min-height: 260px;">
+                <canvas id="severityMiniChart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Stats -->
+    <div class="card animate-in">
+        <div class="card-header">
+            <div class="card-title">
+                <span>⚡</span> Quick Stats
+            </div>
+        </div>
+        <div class="card-body">
+            <div class="detail-grid" style="grid-template-columns: 1fr 1fr;">
+                <div class="detail-item">
+                    <span class="detail-label">Alerts (1h)</span>
+                    <span class="detail-value" id="quick-alerts-1h">{{ stats.recent_1h }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">Alerts (24h)</span>
+                    <span class="detail-value" id="quick-alerts-24h">{{ stats.recent_24h }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">AI Analyzed</span>
+                    <span class="detail-value" id="quick-ai-analyzed">{{ stats.analyzed }}</span>
+                </div>
+                <div class="detail-item">
+                    <span class="detail-label">AI Status</span>
+                    <span class="detail-value" style="color: {{ 'var(--success)' if ai_available else 'var(--error)' }}">
+                        {{ 'Online' if ai_available else 'Offline' }}
+                    </span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Recent Alerts Table ═══ -->
+<div class="card mt-3 animate-in">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🚨</span> Recent Alerts
+        </div>
+        <a href="{{ url_for('analysis') }}" class="btn btn-secondary btn-sm">View All →</a>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-wrapper">
+            <table class="data-table" id="recent-alerts-table">
+                <thead>
+                    <tr>
+                        <th>Time</th>
+                        <th>Severity</th>
+                        <th>Signature</th>
+                        <th>Source IP</th>
+                        <th>Dest IP</th>
+                        <th>Protocol</th>
+                        <th>Action</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in recent_alerts %}
+                    <tr>
+                        <td class="text-mono text-sm">{{ alert.timestamp[:19] }}</td>
+                        <td>
+                            <span class="badge badge-{{ alert.severity_label|lower }}">
+                                <span class="badge-dot"></span>
+                                {{ alert.severity_label }}
+                            </span>
+                        </td>
+                        <td>{{ alert.signature[:50] }}{{ '...' if alert.signature|length > 50 }}</td>
+                        <td class="text-mono">{{ alert.src_ip }}</td>
+                        <td class="text-mono">{{ alert.dest_ip }}</td>
+                        <td><span class="badge badge-info">{{ alert.protocol }}</span></td>
+                        <td>
+                            <a href="{{ url_for('analysis_detail', alert_id=alert.id) }}"
+                               class="btn btn-secondary btn-sm"
+                               data-tooltip="View Details">
+                                🔍
+                            </a>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not recent_alerts %}
+                    <tr>
+                        <td colspan="7">
+                            <div class="empty-state" style="padding: 30px;">
+                                <div class="empty-icon">📭</div>
+                                <div class="empty-text">No alerts yet. Start Suricata to begin monitoring.</div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.4/dist/chart.umd.min.js"></script>
+<script src="{{ url_for('static', filename='js/dashboard.js') }}"></script>
+<script>
+    // Initialize severity mini chart
+    const sevData = {{ severity_dist | tojson }};
+    initSeverityChart(sevData);
+
+    // Auto-refresh dashboard every 3 seconds
+    setInterval(refreshDashboard, 3000);
+</script>
+{% endblock %}

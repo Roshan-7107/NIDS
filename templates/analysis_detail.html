@@ -1,0 +1,146 @@
+{% extends "base.html" %}
+
+{% block title %}Alert #{{ alert.id }} - Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+        <h1 class="page-title">Alert #{{ alert.id }}</h1>
+        <p class="page-subtitle">{{ alert.signature }}</p>
+    </div>
+    <div class="d-flex gap-1">
+        <a href="{{ url_for('analysis') }}" class="btn btn-secondary btn-sm">← Back to Alerts</a>
+        <button class="btn btn-primary btn-sm"
+                id="analyze-detail-btn"
+                onclick="triggerAnalysis({{ alert.id }})">
+            🤖 {{ 'Re-Analyze with AI' if alert.ai_analysis else 'Analyze with AI' }}
+        </button>
+    </div>
+</div>
+
+<!-- ═══ Alert Details ═══ -->
+<div class="card animate-in mb-3">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📋</span> Alert Details
+        </div>
+        <span class="badge badge-{{ alert.severity_label|lower }}">
+            <span class="badge-dot"></span>
+            {{ alert.severity_label }} Severity
+        </span>
+    </div>
+    <div class="card-body">
+        <div class="detail-grid">
+            <div class="detail-item">
+                <span class="detail-label">Timestamp</span>
+                <span class="detail-value mono">{{ alert.timestamp[:19] }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Signature</span>
+                <span class="detail-value">{{ alert.signature }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Signature ID</span>
+                <span class="detail-value mono">{{ alert.signature_id }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Category</span>
+                <span class="detail-value">{{ alert.category }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Source IP</span>
+                <span class="detail-value mono">{{ alert.src_ip }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Source Port</span>
+                <span class="detail-value mono">{{ alert.src_port }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Destination IP</span>
+                <span class="detail-value mono">{{ alert.dest_ip }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Destination Port</span>
+                <span class="detail-value mono">{{ alert.dest_port }}</span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Protocol</span>
+                <span class="detail-value">
+                    <span class="badge badge-info">{{ alert.protocol }}</span>
+                </span>
+            </div>
+            <div class="detail-item">
+                <span class="detail-label">Severity Level</span>
+                <span class="detail-value">
+                    <span class="badge badge-{{ alert.severity_label|lower }}">
+                        <span class="badge-dot"></span>
+                        Level {{ alert.severity }} — {{ alert.severity_label }}
+                    </span>
+                </span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ AI Analysis Section ═══ -->
+<div class="card animate-in" id="ai-analysis-section">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🤖</span> AI Threat Analysis
+        </div>
+        {% if alert.analyzed_at %}
+            <span class="text-sm text-muted">Analyzed at: {{ alert.analyzed_at[:19] }}</span>
+        {% endif %}
+    </div>
+    <div class="card-body">
+        {% if alert.ai_analysis %}
+            <div class="ai-analysis-content" id="analysis-content">{{ alert.ai_analysis }}</div>
+        {% else %}
+            <div class="empty-state" id="no-analysis-state">
+                <div class="empty-icon">🤖</div>
+                <div class="empty-title">Not yet analyzed</div>
+                <div class="empty-text">
+                    Click "Analyze with AI" to generate a threat assessment using Llama 3.
+                    {% if not ai_available %}
+                    <br><br>
+                    <span style="color: var(--severity-medium);">
+                        ⚠️ Ollama is not available. Fallback analysis will be used.
+                    </span>
+                    {% endif %}
+                </div>
+                <button class="btn btn-primary mt-2" onclick="triggerAnalysis({{ alert.id }})">
+                    🤖 Analyze Now
+                </button>
+            </div>
+        {% endif %}
+
+        <!-- Loading state (hidden by default) -->
+        <div class="loading-overlay" id="analysis-loading" style="display: none;">
+            <div class="spinner spinner-lg"></div>
+            <span>Analyzing threat with AI...</span>
+            <span class="text-sm text-muted">This may take a moment</span>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Generate Report ═══ -->
+<div class="card animate-in mt-3">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📄</span> Incident Report
+        </div>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-2">Generate a detailed incident report for this alert, including network details and AI analysis.</p>
+        <form method="POST" action="{{ url_for('generate_report') }}">
+            <input type="hidden" name="report_type" value="incident">
+            <input type="hidden" name="alert_id" value="{{ alert.id }}">
+            <button type="submit" class="btn btn-secondary">📄 Generate Incident Report</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+{% endblock %}

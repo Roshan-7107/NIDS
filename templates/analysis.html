@@ -1,0 +1,160 @@
+{% extends "base.html" %}
+
+{% block title %}AI Analysis{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+        <h1 class="page-title">AI Threat Analysis</h1>
+        <p class="page-subtitle">Browse alerts and trigger AI-powered security analysis with Llama 3</p>
+    </div>
+    <div class="d-flex align-center gap-1">
+        {% if ai_available %}
+            <span class="badge badge-low"><span class="badge-dot"></span> Llama 3 Online</span>
+        {% else %}
+            <span class="badge badge-high"><span class="badge-dot"></span> Llama 3 Offline — Fallback Mode</span>
+        {% endif %}
+    </div>
+</div>
+
+<!-- ═══ Filter Bar ═══ -->
+<form class="filter-bar" method="GET" action="{{ url_for('analysis') }}" id="filter-form">
+    <input type="text" name="search" class="form-input search-input"
+           placeholder="🔍 Search signatures, categories, IPs..."
+           value="{{ search }}" id="search-input">
+
+    <select name="severity" class="form-input form-select" style="max-width: 180px;" id="severity-filter">
+        <option value="">All Severities</option>
+        <option value="1" {{ 'selected' if severity == 1 }}>🔴 High</option>
+        <option value="2" {{ 'selected' if severity == 2 }}>🟡 Medium</option>
+        <option value="3" {{ 'selected' if severity == 3 }}>🟢 Low</option>
+    </select>
+
+    <button type="submit" class="btn btn-primary btn-sm">Filter</button>
+    <a href="{{ url_for('analysis') }}" class="btn btn-secondary btn-sm">Clear</a>
+</form>
+
+<!-- ═══ Alerts Table ═══ -->
+<div class="card">
+    <div class="card-header">
+        <div class="card-title">
+            <span>🚨</span> Alerts ({{ total }} total)
+        </div>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <div class="table-wrapper">
+            <table class="data-table" id="alerts-table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Time</th>
+                        <th>Severity</th>
+                        <th>Signature</th>
+                        <th>Category</th>
+                        <th>Source IP</th>
+                        <th>AI Status</th>
+                        <th>Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for alert in alerts %}
+                    <tr id="alert-row-{{ alert.id }}">
+                        <td class="text-mono text-sm">#{{ alert.id }}</td>
+                        <td class="text-mono text-sm">{{ alert.timestamp[:19] }}</td>
+                        <td>
+                            <span class="badge badge-{{ alert.severity_label|lower }}">
+                                <span class="badge-dot"></span>
+                                {{ alert.severity_label }}
+                            </span>
+                        </td>
+                        <td>{{ alert.signature[:45] }}{{ '...' if alert.signature|length > 45 }}</td>
+                        <td class="text-sm">{{ alert.category[:30] }}{{ '...' if alert.category|length > 30 }}</td>
+                        <td class="text-mono">{{ alert.src_ip }}</td>
+                        <td>
+                            {% if alert.ai_analysis %}
+                                <span class="badge badge-low"><span class="badge-dot"></span> Analyzed</span>
+                            {% else %}
+                                <span class="badge badge-info"><span class="badge-dot"></span> Pending</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            <div class="d-flex gap-1">
+                                <a href="{{ url_for('analysis_detail', alert_id=alert.id) }}"
+                                   class="btn btn-secondary btn-sm" data-tooltip="View Details">
+                                    🔍
+                                </a>
+                                <button class="btn btn-primary btn-sm analyze-btn"
+                                        data-alert-id="{{ alert.id }}"
+                                        onclick="triggerAnalysis({{ alert.id }})"
+                                        data-tooltip="Analyze with AI">
+                                    🤖
+                                </button>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                    {% if not alerts %}
+                    <tr>
+                        <td colspan="8">
+                            <div class="empty-state">
+                                <div class="empty-icon">📭</div>
+                                <div class="empty-title">No alerts found</div>
+                                <div class="empty-text">
+                                    {% if search or severity %}
+                                        No alerts match your filters. Try clearing the filters.
+                                    {% else %}
+                                        No alerts detected yet. Start Suricata to begin monitoring.
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endif %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<!-- ═══ Pagination ═══ -->
+{% if total_pages > 1 %}
+<div class="pagination">
+    {% if page > 1 %}
+        <a href="{{ url_for('analysis', page=page-1, severity=severity, search=search) }}">←</a>
+    {% endif %}
+
+    {% for p in range(1, total_pages + 1) %}
+        {% if p == page %}
+            <span class="current">{{ p }}</span>
+        {% elif p <= 3 or p >= total_pages - 2 or (p >= page - 1 and p <= page + 1) %}
+            <a href="{{ url_for('analysis', page=p, severity=severity, search=search) }}">{{ p }}</a>
+        {% elif p == 4 or p == total_pages - 3 %}
+            <span style="color: var(--text-muted);">…</span>
+        {% endif %}
+    {% endfor %}
+
+    {% if page < total_pages %}
+        <a href="{{ url_for('analysis', page=page+1, severity=severity, search=search) }}">→</a>
+    {% endif %}
+</div>
+{% endif %}
+
+<!-- ═══ Inline Analysis Result (shown after clicking Analyze) ═══ -->
+<div id="analysis-result-container" class="mt-3" style="display: none;">
+    <div class="card">
+        <div class="card-header">
+            <div class="card-title">
+                <span>🤖</span> AI Analysis Result
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('analysis-result-container').style.display='none'">✕ Close</button>
+        </div>
+        <div class="card-body">
+            <div id="analysis-result-content" class="ai-analysis-content"></div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script src="{{ url_for('static', filename='js/analysis.js') }}"></script>
+{% endblock %}

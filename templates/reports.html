@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Reports{% endblock %}
+
+{% block content %}
+<div class="page-header d-flex justify-between align-center flex-wrap gap-2">
+    <div>
+        <h1 class="page-title">Security Reports</h1>
+        <p class="page-subtitle">Generate and download incident and summary reports</p>
+    </div>
+    <form method="POST" action="{{ url_for('generate_report') }}" style="display: inline;">
+        <input type="hidden" name="report_type" value="summary">
+        <button type="submit" class="btn btn-primary">
+            📊 Generate Summary Report
+        </button>
+    </form>
+</div>
+
+<!-- ═══ Report Stats ═══ -->
+<div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));">
+    <div class="stat-card total animate-in">
+        <div class="stat-icon">📄</div>
+        <div class="stat-value">{{ reports | length }}</div>
+        <div class="stat-label">Total Reports</div>
+    </div>
+    <div class="stat-card high animate-in">
+        <div class="stat-icon">🔔</div>
+        <div class="stat-value">{{ stats.total }}</div>
+        <div class="stat-label">Total Alerts</div>
+    </div>
+    <div class="stat-card medium animate-in">
+        <div class="stat-icon">🤖</div>
+        <div class="stat-value">{{ stats.analyzed }}</div>
+        <div class="stat-label">AI Analyzed</div>
+    </div>
+</div>
+
+<!-- ═══ Reports List ═══ -->
+<div class="card animate-in">
+    <div class="card-header">
+        <div class="card-title">
+            <span>📋</span> Generated Reports
+        </div>
+    </div>
+    <div class="card-body">
+        {% for report in reports %}
+        <div class="report-card" id="report-{{ report.id }}">
+            <div class="report-info">
+                <div class="report-title">{{ report.title }}</div>
+                <div class="report-meta">
+                    <span>📅 {{ report.created_at[:19] }}</span>
+                    <span>📊 {{ report.total_alerts }} alerts</span>
+                    <span>
+                        {% if report.report_type == 'incident' %}
+                            <span class="badge badge-high" style="padding: 2px 8px; font-size: 10px;">Incident</span>
+                        {% else %}
+                            <span class="badge badge-info" style="padding: 2px 8px; font-size: 10px;">Summary</span>
+                        {% endif %}
+                    </span>
+                </div>
+            </div>
+            <div class="report-actions">
+                <button class="btn btn-secondary btn-sm"
+                        onclick="toggleReport({{ report.id }})">
+                    👁️ Preview
+                </button>
+                <a href="{{ url_for('download_report', report_id=report.id) }}"
+                   class="btn btn-primary btn-sm">
+                    📥 Download
+                </a>
+            </div>
+        </div>
+
+        <!-- Report Preview (hidden by default) -->
+        <div id="report-preview-{{ report.id }}" style="display: none; margin-bottom: 16px;">
+            <div class="report-content-viewer">{{ report.content }}</div>
+        </div>
+        {% endfor %}
+
+        {% if not reports %}
+        <div class="empty-state">
+            <div class="empty-icon">📄</div>
+            <div class="empty-title">No reports generated yet</div>
+            <div class="empty-text">
+                Click "Generate Summary Report" to create your first security report,
+                or generate incident reports from individual alerts in the AI Analysis section.
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+    function toggleReport(reportId) {
+        const preview = document.getElementById('report-preview-' + reportId);
+        if (preview.style.display === 'none') {
+            // Hide all other previews
+            document.querySelectorAll('[id^="report-preview-"]').forEach(el => {
+                el.style.display = 'none';
+            });
+            preview.style.display = 'block';
+            preview.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+        } else {
+            preview.style.display = 'none';
+        }
+    }
+</script>
+{% endblock %}

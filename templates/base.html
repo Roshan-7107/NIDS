@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="AI-Powered Network Intrusion Detection System - Security Operations Center Dashboard">
+    <meta name="theme-color" content="#0a0e1a">
+    <title>{% block title %}AI-NIDS{% endblock %} | SOC Dashboard</title>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+
+    <!-- Stylesheets -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    
+
+    {% block extra_head %}{% endblock %}
+</head>
+<body>
+    <div class="app-wrapper">
+
+        <!-- ═══ Sidebar ═══ -->
+        <aside class="sidebar">
+            <a href="{{ url_for('dashboard') }}" class="sidebar-brand">
+                <div class="brand-icon">🛡️</div>
+                <div class="brand-text">
+                    <span class="brand-name">AI-NIDS</span>
+                    <span class="brand-subtitle">Security Ops</span>
+                </div>
+            </a>
+
+            <nav class="sidebar-nav">
+                <a href="{{ url_for('dashboard') }}"
+                   class="nav-item {{ 'active' if active_page == 'dashboard' }}"
+                   id="nav-dashboard">
+                    <span class="nav-icon">📊</span>
+                    <span class="nav-label">Dashboard</span>
+                </a>
+                <a href="{{ url_for('analytics') }}"
+                   class="nav-item {{ 'active' if active_page == 'analytics' }}"
+                   id="nav-analytics">
+                    <span class="nav-icon">📈</span>
+                    <span class="nav-label">Analytics</span>
+                </a>
+                <a href="{{ url_for('analysis') }}"
+                   class="nav-item {{ 'active' if active_page == 'analysis' }}"
+                   id="nav-analysis">
+                    <span class="nav-icon">🤖</span>
+                    <span class="nav-label">AI Analysis</span>
+                </a>
+                <a href="{{ url_for('reports') }}"
+                   class="nav-item {{ 'active' if active_page == 'reports' }}"
+                   id="nav-reports">
+                    <span class="nav-icon">📄</span>
+                    <span class="nav-label">Reports</span>
+                </a>
+            </nav>
+
+            <div class="sidebar-footer">
+                <div class="ai-status" id="ai-status-indicator">
+                    <span class="status-dot {{ 'online' if ai_available is defined and ai_available else 'offline' }}"></span>
+                    <div>
+                        <div class="status-label">Llama 3</div>
+                        <div class="status-text">{{ 'Online' if ai_available is defined and ai_available else 'Offline' }}</div>
+                    </div>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ═══ Main Content ═══ -->
+        <main class="main-content">
+            {% with messages = get_flashed_messages(with_categories=true) %}
+                {% if messages %}
+                    <div class="flash-container">
+                        {% for category, message in messages %}
+                            <div class="flash-message {{ category }}" onclick="this.remove()">
+                                <span>{{ '✓' if category == 'success' else '✕' }}</span>
+                                {{ message }}
+                            </div>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+            {% endwith %}
+
+            {% if error_code is defined and error_code %}
+                <div class="empty-state">
+                    <div class="empty-icon">{{ '🔍' if error_code == 404 else '⚠️' }}</div>
+                    <div class="empty-title">Error {{ error_code }}</div>
+                    <div class="empty-text">{{ error_message }}</div>
+                    <a href="{{ url_for('dashboard') }}" class="btn btn-primary mt-2">Go to Dashboard</a>
+                </div>
+            {% else %}
+                {% block content %}{% endblock %}
+            {% endif %}
+        </main>
+    </div>
+
+    <!-- Auto-dismiss flash messages -->
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            // Auto-dismiss flash messages after 5s
+            document.querySelectorAll('.flash-message').forEach(function(msg) {
+                setTimeout(function() {
+                    msg.style.animation = 'slideIn 0.3s ease reverse';
+                    setTimeout(function() { msg.remove(); }, 300);
+                }, 5000);
+            });
+        });
+    </script>
+
+    {% block extra_scripts %}{% endblock %}
+</body>
+</html>
